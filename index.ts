@@ -63,19 +63,21 @@ type VarsBareNames<Vars> = {
 
 interface Runner<Vars, Defs> {
   bareVars: VarsBareNames<Vars>;
-  fields: RunnerFields<Defs>;
+  run(): RunnerOutput<Defs>;
 }
 
+type FieldTypeMap = {
+  'String!': string;
+  'ID!': string;
+};
+
 // interpret the collected query definitions
-type RunnerFields<Defs> = {
+type RunnerOutput<Defs> = {
   [Field in keyof Defs]: Defs[Field] extends string
-    ? { type: Defs[Field] }
+    ? FieldTypeMap[Extract<Defs[Field], keyof FieldTypeMap>]
     : Defs[Field] extends OpDefinition<any, infer OpName, infer OpFields>
-    ? {
-        opName: OpName extends string ? OpName : Field;
-        opFields: RunnerFields<OpFields>;
-      }
-    : { fields: RunnerFields<Defs[Field]> };
+    ? RunnerOutput<OpFields>
+    : RunnerOutput<Defs[Field]>;
 };
 
 const q = withVars({
@@ -118,7 +120,7 @@ const q = withVars({
 });
 
 const vA = q.bareVars.varA;
-const a = q.fields.order.opFields.legacyResourceId.type;
-const b = q.fields.order.opFields.shippingAddress.fields.zip.type;
-const c = q.fields.order.opFields.renamedOp.opFields;
-const d = q.fields.order.opFields.someImplicitOp.opName;
+const a = q.run().order.legacyResourceId;
+const b = q.run().order.shippingAddress.zip;
+const c = q.run().order.renamedOp;
+const d = q.run().order.someImplicitOp.value;
