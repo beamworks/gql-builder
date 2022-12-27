@@ -70,11 +70,11 @@ type VarsBareNames<Vars> = {
     : never]: Vars[T];
 };
 
-type VarTuple<Def> = Def extends VarDefinition<infer VarName, infer VarType>
-  ? [VarName, VarType]
+type VarKeyValue<Def> = Def extends VarDefinition<infer VarName, infer VarType>
+  ? { [k in VarName]: VarType }
   : never;
 
-// interpret the collected query definitions
+// get a union of { param: type } variable info objects from definitions
 type VarsFromDefs<
   Defs extends Definitions<any>,
   Field extends keyof Defs = keyof Defs
@@ -86,12 +86,19 @@ type VarsFromDefs<
         infer OpParams,
         infer OpFields
       >
-    ? VarTuple<OpParams[keyof OpParams]> | VarsFromDefs<OpFields>
+    ? VarKeyValue<OpParams[keyof OpParams]> | VarsFromDefs<OpFields>
     : VarsFromDefs<Defs[Field]>
   : never;
 
-interface Runner<Defs> {
-  bareVars: VarsFromDefs<Defs>;
+// more evil magic from StackOverflow
+type UnionToIntersection<Union> = (
+  Union extends any ? (k: Union) => void : never
+) extends (k: infer Intersection) => void
+  ? Intersection
+  : never;
+
+interface Runner<Defs extends Definitions<string>> {
+  bareVars: UnionToIntersection<VarsFromDefs<Defs>>;
   run(): RunnerOutput<Defs>;
 }
 
@@ -111,7 +118,7 @@ type RunnerOutput<Defs> = {
 
 const q = query({
   order: op(
-    { argA: qvar("$varA", "ID!") },
+    { argA: qvar("$varA", "ID!"), argB: qvar("$varB", "Number!") },
     {
       legacyResourceId: "String!",
 
@@ -144,7 +151,7 @@ const q = query({
   ),
 });
 
-const vA = q.bareVars;
+const vB = q.bareVars.$varB;
 const a = q.run().order.legacyResourceId;
 const b = q.run().order.shippingAddress.zip;
 const c = q.run().order.renamedOp;
