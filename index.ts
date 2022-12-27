@@ -3,8 +3,7 @@
 declare const VAR_MARKER: unique symbol;
 
 type VarDefinition<VarName extends string, VarType extends string> = {
-  [VAR_MARKER]: VarName;
-  type: VarType;
+  [VAR_MARKER]: [VarName, VarType];
 };
 
 interface OpParamDefs {
@@ -27,13 +26,11 @@ type Definitions<MagicNarrowString extends string> = {
 
 declare const OP_MARKER: unique symbol;
 type OpDefinition<
-  OpName extends string | null,
+  OpName extends string | null, // null means infer from field name
   Params extends OpParamDefs,
   Defs
 > = {
-  [OP_MARKER]: Params;
-  name: OpName; // null means infer from field name
-  output: Defs;
+  [OP_MARKER]: [OpName, Params, Defs];
 };
 
 declare function op<
