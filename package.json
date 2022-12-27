@@ -1,0 +1,11 @@
+{
+  "name": "gql-builder",
+  "version": "0.0.1",
+  "description": "Experimental builder for typesafe and Zod-validated GraphQL queries",
+  "main": "index.ts",
+  "author": "Nick Matantsev <nick.matantsev@beamworks.io>",
+  "license": "MIT",
+  "devDependencies": {
+    "prettier": "^2.8.1"
+  }
+}
