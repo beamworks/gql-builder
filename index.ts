@@ -72,18 +72,21 @@ type VarKeyValue<Def> = Def extends VarDefinition<infer VarName, infer VarType>
   : never;
 
 // get a union of { param: type } variable info objects from definitions
+// (note: `Field extends string` ternary seems to be required, otherwise recursion fails
 type VarsFromDefs<
   Defs extends Definitions<any>,
-  Field extends keyof Defs = keyof Defs
-> = Defs[Field] extends string
-  ? never
-  : Defs[Field] extends OpDefinition<
-      infer OpName,
-      infer OpParams,
-      infer OpFields
-    >
-  ? VarKeyValue<OpParams[keyof OpParams]> | VarsFromDefs<OpFields>
-  : VarsFromDefs<Defs[Field]>;
+  Field = keyof Defs
+> = Field extends string
+  ? Defs[Field] extends string
+    ? never
+    : Defs[Field] extends OpDefinition<
+        infer OpName,
+        infer OpParams,
+        infer OpFields
+      >
+    ? VarKeyValue<OpParams[keyof OpParams]> | VarsFromDefs<OpFields>
+    : VarsFromDefs<Defs[Field]>
+  : never;
 
 // more evil magic from StackOverflow
 type UnionToIntersection<Union> = (
@@ -155,7 +158,7 @@ const q = query({
 const bareVars: RunnerVars<typeof q> = {
   $varA: "asdf",
   $varB: 1234,
-  // $varC: "cvbxcvb",
+  $varC: "cvbxcvb",
 };
 
 const a = q.run(bareVars).order.legacyResourceId;
