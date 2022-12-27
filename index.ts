@@ -88,7 +88,7 @@ type VarsFromDefs<
     : VarsFromDefs<Defs[Field]>
   : never;
 
-// more evil magic from StackOverflow
+// more evil magic: https://stackoverflow.com/questions/50374908/transform-union-type-to-intersection-type
 type UnionToIntersection<Union> = (
   Union extends any ? (k: Union) => void : never
 ) extends (k: infer Intersection) => void
