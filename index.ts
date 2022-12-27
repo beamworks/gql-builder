@@ -67,8 +67,8 @@ interface Runner<Vars, Defs> {
 }
 
 type FieldTypeMap = {
-  'String!': string;
-  'ID!': string;
+  "String!": string;
+  "ID!": string;
 };
 
 // interpret the collected query definitions
@@ -81,38 +81,38 @@ type RunnerOutput<Defs> = {
 };
 
 const q = withVars({
-  $varA: 'ID!',
-  $varB: 'String!',
-  $varC: 'String!',
+  $varA: "ID!",
+  $varB: "String!",
+  $varC: "String!",
 }).query({
   order: op(
-    { argA: '$varA' },
+    { argA: "$varA" },
     {
-      legacyResourceId: 'String!',
+      legacyResourceId: "String!",
 
       shippingAddress: {
-        name: 'String!',
+        name: "String!",
 
-        address1: 'String!',
-        address2: 'String!',
-        city: 'String!',
-        provinceCode: 'String!',
-        countryCodeV2: 'String!',
-        zip: 'String!',
+        address1: "String!",
+        address2: "String!",
+        city: "String!",
+        provinceCode: "String!",
+        countryCodeV2: "String!",
+        zip: "String!",
       },
 
       renamedOp: op(
-        'metafield',
-        { test: '$varC' },
+        "metafield",
+        { test: "$varC" },
         {
-          value: 'String!',
+          value: "String!",
         }
       ),
 
       someImplicitOp: op(
-        { test: '$varC' },
+        { test: "$varC" },
         {
-          value: 'String!',
+          value: "String!",
         }
       ),
     }
