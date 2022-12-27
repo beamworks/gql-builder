@@ -1,7 +1,14 @@
 // scratchpad
 
-interface OpParamDefs<MagicNarrowString extends string> {
-  [paramName: string]: MagicNarrowString;
+declare const VAR_MARKER: unique symbol;
+
+type VarDefinition<VarName extends string, VarType extends string> = {
+  [VAR_MARKER]: VarName;
+  type: VarType;
+};
+
+interface OpParamDefs {
+  [paramName: string]: VarDefinition<string, string>;
 }
 
 // using the weird "ask to TS keep strings narrow" trick from:
@@ -13,7 +20,7 @@ type Definitions<MagicNarrowString extends string> = {
     | Definitions<MagicNarrowString>
     | OpDefinition<
         MagicNarrowString | null,
-        OpParamDefs<MagicNarrowString>,
+        OpParamDefs,
         Definitions<MagicNarrowString>
       >;
 };
@@ -21,7 +28,7 @@ type Definitions<MagicNarrowString extends string> = {
 declare const OP_MARKER: unique symbol;
 type OpDefinition<
   OpName extends string | null,
-  Params extends Record<string, string>,
+  Params extends OpParamDefs,
   Defs
 > = {
   [OP_MARKER]: Params;
@@ -30,13 +37,13 @@ type OpDefinition<
 };
 
 declare function op<
-  Params extends OpParamDefs<MagicNarrowString>,
+  Params extends OpParamDefs,
   Defs extends Definitions<MagicNarrowString>,
   MagicNarrowString extends string
 >(params: Params, defs: Defs): OpDefinition<null, Params, Defs>;
 declare function op<
   OpName extends string,
-  Params extends OpParamDefs<MagicNarrowString>,
+  Params extends OpParamDefs,
   Defs extends Definitions<MagicNarrowString>,
   MagicNarrowString extends string
 >(
@@ -44,6 +51,11 @@ declare function op<
   params: Params,
   defs: Defs
 ): OpDefinition<OpName, Params, Defs>;
+
+declare function qvar<VarName extends `$${string}`, VarType extends string>(
+  varName: VarName,
+  varType: VarType
+): VarDefinition<VarName, VarType>;
 
 declare function query<
   Defs extends Definitions<MagicNarrowString>,
@@ -58,6 +70,10 @@ type VarsBareNames<Vars> = {
     : never]: Vars[T];
 };
 
+type VarTuple<Def> = Def extends VarDefinition<infer VarName, infer VarType>
+  ? [VarName, VarType]
+  : never;
+
 // interpret the collected query definitions
 type VarsFromDefs<
   Defs extends Definitions<any>,
@@ -70,7 +86,7 @@ type VarsFromDefs<
         infer OpParams,
         infer OpFields
       >
-    ? [OpParams[keyof OpParams], ""] | VarsFromDefs<OpFields>
+    ? VarTuple<OpParams[keyof OpParams]> | VarsFromDefs<OpFields>
     : VarsFromDefs<Defs[Field]>
   : never;
 
@@ -95,7 +111,7 @@ type RunnerOutput<Defs> = {
 
 const q = query({
   order: op(
-    { argA: "$varA" },
+    { argA: qvar("$varA", "ID!") },
     {
       legacyResourceId: "String!",
 
@@ -112,14 +128,14 @@ const q = query({
 
       renamedOp: op(
         "metafield",
-        { test: "$varC" },
+        { test: qvar("$varC", "String!") },
         {
           value: "String!",
         }
       ),
 
       someImplicitOp: op(
-        { test: "$varC" },
+        { test: qvar("$varC", "String!") },
         {
           value: "String!",
         }
