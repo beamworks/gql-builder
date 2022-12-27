@@ -19,7 +19,11 @@ type Definitions<MagicNarrowString extends string> = {
 };
 
 declare const OP_MARKER: unique symbol;
-type OpDefinition<OpName extends string | null, Params, Defs> = {
+type OpDefinition<
+  OpName extends string | null,
+  Params extends Record<string, string>,
+  Defs
+> = {
   [OP_MARKER]: Params;
   name: OpName; // null means infer from field name
   output: Defs;
@@ -56,7 +60,6 @@ type VarsBareNames<Vars> = {
 
 // interpret the collected query definitions
 type VarsFromDefs<
-  Prefix extends string,
   Defs extends Definitions<any>,
   Field extends keyof Defs = keyof Defs
 > = Field extends string
@@ -67,19 +70,12 @@ type VarsFromDefs<
         infer OpParams,
         infer OpFields
       >
-    ?
-        | {
-            var: `${Prefix}${Field}$${keyof OpParams extends string
-              ? keyof OpParams
-              : never}`;
-            type: "";
-          }
-        | VarsFromDefs<`${Prefix}${Field}$`, OpFields>
-    : VarsFromDefs<`${Prefix}${Field}$`, Defs[Field]>
+    ? [OpParams[keyof OpParams], ""] | VarsFromDefs<OpFields>
+    : VarsFromDefs<Defs[Field]>
   : never;
 
 interface Runner<Defs> {
-  bareVars: VarsFromDefs<"$", Defs>;
+  bareVars: VarsFromDefs<Defs>;
   run(): RunnerOutput<Defs>;
 }
 
