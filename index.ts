@@ -68,7 +68,7 @@ type VarsBareNames<Vars> = {
 };
 
 type VarKeyValue<Def> = Def extends VarDefinition<infer VarName, infer VarType>
-  ? { [k in VarName]: VarType }
+  ? { [k in VarName]: FieldTypeMap[Extract<VarType, keyof FieldTypeMap>] }
   : never;
 
 // get a union of { param: type } variable info objects from definitions
@@ -92,13 +92,19 @@ type UnionToIntersection<Union> = (
   ? Intersection
   : never;
 
+type RunnerVars<R extends Runner<Definitions<any>>> = R extends Runner<
+  infer Defs
+>
+  ? UnionToIntersection<VarsFromDefs<Defs>>
+  : never;
+
 interface Runner<Defs extends Definitions<string>> {
-  bareVars: UnionToIntersection<VarsFromDefs<Defs>>;
-  run(): RunnerOutput<Defs>;
+  run(vars: UnionToIntersection<VarsFromDefs<Defs>>): RunnerOutput<Defs>;
 }
 
 type FieldTypeMap = {
   "String!": string;
+  "Number!": number;
   "ID!": string;
 };
 
@@ -146,8 +152,13 @@ const q = query({
   ),
 });
 
-const vB = q.bareVars.$varB;
-const a = q.run().order.legacyResourceId;
-const b = q.run().order.shippingAddress.zip;
-const c = q.run().order.renamedOp;
-const d = q.run().order.someImplicitOp.value;
+const bareVars: RunnerVars<typeof q> = {
+  $varA: "asdf",
+  $varB: 1234,
+  // $varC: "cvbxcvb",
+};
+
+const a = q.run(bareVars).order.legacyResourceId;
+const b = q.run(bareVars).order.shippingAddress.zip;
+const c = q.run(bareVars).order.renamedOp;
+const d = q.run(bareVars).order.someImplicitOp.value;
