@@ -1,8 +1,16 @@
-declare const VAR_MARKER: unique symbol;
-
+const VAR_MARKER = Symbol("var marker");
 type VarDefinition<VarName extends string, VarType extends string> = {
   [VAR_MARKER]: [VarName, VarType];
 };
+
+export function input<VarName extends `$${string}`, VarType extends string>(
+  varName: VarName,
+  varType: VarType
+): VarDefinition<VarName, VarType> {
+  return {
+    [VAR_MARKER]: [varName, varType],
+  };
+}
 
 interface OpParamDefs {
   [paramName: string]: VarDefinition<string, string>;
@@ -46,11 +54,6 @@ export declare function op<
   params: Params,
   defs: Defs
 ): OpDefinition<OpName, Params, Defs>;
-
-export declare function qvar<
-  VarName extends `$${string}`,
-  VarType extends string
->(varName: VarName, varType: VarType): VarDefinition<VarName, VarType>;
 
 export declare function query<
   Defs extends Definitions<MagicNarrowString>,
