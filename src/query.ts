@@ -1,3 +1,4 @@
+// variable input definition object
 const VAR_MARKER = Symbol("var marker");
 type VarDefinition<VarName extends string, VarType extends string> = {
   [VAR_MARKER]: [VarName, VarType];
@@ -10,10 +11,6 @@ export function input<VarName extends `$${string}`, VarType extends string>(
   return {
     [VAR_MARKER]: [varName, varType],
   };
-}
-
-interface OpParamDefs {
-  [paramName: string]: VarDefinition<string, string>;
 }
 
 // using the weird "ask to TS keep strings narrow" trick from:
@@ -30,7 +27,13 @@ type Definitions<MagicNarrowString extends string> = {
       >;
 };
 
-declare const OP_MARKER: unique symbol;
+// operation params map
+interface OpParamDefs {
+  [paramName: string]: VarDefinition<string, string>;
+}
+
+// operation definition object
+const OP_MARKER = Symbol("op marker");
 type OpDefinition<
   OpName extends string | null, // null means infer from field name
   Params extends OpParamDefs,
@@ -39,12 +42,14 @@ type OpDefinition<
   [OP_MARKER]: [OpName, Params, Defs];
 };
 
-export declare function op<
+// convenience variations with and without explicit op name
+export function op<
   Params extends OpParamDefs,
   Defs extends Definitions<MagicNarrowString>,
   MagicNarrowString extends string
 >(params: Params, defs: Defs): OpDefinition<null, Params, Defs>;
-export declare function op<
+
+export function op<
   OpName extends string,
   Params extends OpParamDefs,
   Defs extends Definitions<MagicNarrowString>,
@@ -54,6 +59,19 @@ export declare function op<
   params: Params,
   defs: Defs
 ): OpDefinition<OpName, Params, Defs>;
+
+export function op(
+  ...args:
+    | [string, OpParamDefs, Definitions<string>]
+    | [OpParamDefs, Definitions<string>]
+) {
+  const [opName, params, defs] =
+    args.length === 2
+      ? ([null, ...args] as [null, OpParamDefs, Definitions<string>])
+      : args;
+
+  return { [OP_MARKER]: [opName, params, defs] };
+}
 
 export declare function query<
   Defs extends Definitions<MagicNarrowString>,
