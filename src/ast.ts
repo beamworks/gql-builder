@@ -12,7 +12,6 @@ export interface ArgumentsShape {
 }
 
 // full field definition object
-// @todo rename to args selection or something, and use for aliasing simple fields too
 export const FIELD_MARKER = Symbol("field marker");
 export type FieldDefinition<
   Name extends string | null, // null means infer from field name
@@ -25,7 +24,6 @@ export type FieldDefinition<
 // using the weird "ask to TS keep strings narrow" trick from:
 // https://stackoverflow.com/questions/59440453/dynamically-generate-return-type-based-on-array-parameter-of-objects-in-typescri
 // and discussed here: https://github.com/microsoft/TypeScript/issues/30680
-// @todo rename to selection
 export type SelectionShape<MagicNarrowString extends string> = {
   [FIELD_MARKER]?: undefined; // disambiguation
 
