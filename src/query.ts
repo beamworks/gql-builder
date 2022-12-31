@@ -3,6 +3,7 @@ import {
   Kind,
   OperationTypeNode,
   SelectionSetNode,
+  VariableDefinitionNode,
   print,
 } from "graphql";
 
@@ -14,6 +15,7 @@ import {
   VAR_MARKER,
   FIELD_MARKER,
   produceSimpleFieldSet,
+  produceTypeNode,
 } from "./ast";
 
 // GraphQL types to JS types
@@ -92,13 +94,37 @@ export function query<
 >(
   defs: Selection // top level, like anything, can be simple fields, selections with arguments, etc
 ): Runner<Selection> {
+  const allVars: { [name: string]: string } = {};
+  const rootSelectionSet = produceSimpleFieldSet(defs, allVars);
+
+  const varList = Object.keys(allVars);
+  const rootVars =
+    varList.length > 0
+      ? varList.map((varName): VariableDefinitionNode => {
+          const varType = allVars[varName];
+
+          return {
+            kind: Kind.VARIABLE_DEFINITION,
+            variable: {
+              kind: Kind.VARIABLE,
+              name: {
+                kind: Kind.NAME,
+                value: varName,
+              },
+            },
+            type: produceTypeNode(varType),
+          };
+        })
+      : undefined;
+
   const testAST: ASTNode = {
     kind: Kind.DOCUMENT,
     definitions: [
       {
         kind: Kind.OPERATION_DEFINITION,
         operation: OperationTypeNode.QUERY,
-        selectionSet: produceSimpleFieldSet(defs),
+        variableDefinitions: rootVars,
+        selectionSet: rootSelectionSet,
       },
     ],
   };

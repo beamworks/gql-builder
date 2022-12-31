@@ -1,4 +1,11 @@
-import { ASTNode, Kind, OperationTypeNode, SelectionSetNode } from "graphql";
+import {
+  ASTNode,
+  Kind,
+  OperationTypeNode,
+  SelectionSetNode,
+  FieldNode,
+  TypeNode,
+} from "graphql";
 
 // variable input definition object
 export const VAR_MARKER = Symbol("var marker");
@@ -44,11 +51,12 @@ function isFieldDef(
 }
 
 export function produceSimpleFieldSet(
-  selection: SelectionShape<string>
+  selection: SelectionShape<string>,
+  allVars: { [name: string]: string }
 ): SelectionSetNode {
   return {
     kind: Kind.SELECTION_SET,
-    selections: Object.keys(selection).map((field) => {
+    selections: Object.keys(selection).map((field): FieldNode => {
       const value = selection[field];
 
       if (typeof value === "string") {
@@ -63,6 +71,10 @@ export function produceSimpleFieldSet(
 
       if (isFieldDef(value)) {
         const [name, args, subSelection] = value[FIELD_MARKER];
+        const selectionSet =
+          typeof subSelection === "string"
+            ? undefined // simple field
+            : produceSimpleFieldSet(subSelection, allVars);
 
         return {
           kind: Kind.FIELD,
@@ -80,6 +92,20 @@ export function produceSimpleFieldSet(
           arguments: args
             ? Object.keys(args).map((argKey) => {
                 const param = args[argKey];
+                const [varName, varType] = param[VAR_MARKER];
+
+                const existingType = allVars[varName];
+                if (existingType) {
+                  // assert that the type is consistent in all spots
+                  if (existingType !== varType) {
+                    throw new Error(
+                      `variable type mismatch for $${varName}: ${varType} vs ${existingType}`
+                    );
+                  }
+                } else {
+                  allVars[varName] = varType;
+                }
+
                 return {
                   kind: Kind.ARGUMENT,
                   name: {
@@ -90,16 +116,13 @@ export function produceSimpleFieldSet(
                     kind: Kind.VARIABLE,
                     name: {
                       kind: Kind.NAME,
-                      value: param[VAR_MARKER][0],
+                      value: varName,
                     },
                   },
                 };
               })
             : undefined,
-          selectionSet:
-            typeof subSelection === "string"
-              ? undefined // simple field
-              : produceSimpleFieldSet(subSelection),
+          selectionSet,
         };
       }
 
@@ -109,8 +132,40 @@ export function produceSimpleFieldSet(
           kind: Kind.NAME,
           value: field,
         },
-        selectionSet: produceSimpleFieldSet(value),
+        selectionSet: produceSimpleFieldSet(value, allVars),
       };
     }),
+  };
+}
+
+export function produceTypeNode(varType: string): TypeNode {
+  // non-null (Acme!)
+  if (varType[varType.length - 1] === "!") {
+    const subType = produceTypeNode(varType.slice(0, -1));
+    if (subType.kind === Kind.NON_NULL_TYPE) {
+      throw new Error("nested non-null type: " + varType);
+    }
+
+    return {
+      kind: Kind.NON_NULL_TYPE,
+      type: subType,
+    };
+  }
+
+  // list ([Acme])
+  if (varType[0] === "[" && varType[varType.length - 1] === "]") {
+    return {
+      kind: Kind.LIST_TYPE,
+      type: produceTypeNode(varType.slice(1, -1)),
+    };
+  }
+
+  // name
+  return {
+    kind: Kind.NAMED_TYPE,
+    name: {
+      kind: Kind.NAME,
+      value: varType,
+    },
   };
 }
