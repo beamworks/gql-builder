@@ -1,8 +1,8 @@
 // scratchpad
-import { query, op, input, RunnerVars } from "./src/query";
+import { query, select, input, RunnerVars } from "./src/query";
 
 const q = query({
-  order: op(
+  order: select(
     { argA: input("$varA", "ID!"), argB: input("$varB", "Number!") },
     {
       legacyResourceId: "String!",
@@ -18,7 +18,7 @@ const q = query({
         zip: "String!",
       },
 
-      renamedOp: op(
+      renamedOp: select(
         "metafield",
         { test: input("$varC", "String!") },
         {
@@ -26,7 +26,7 @@ const q = query({
         }
       ),
 
-      someImplicitOp: op(
+      someImplicitOp: select(
         { test: input("$varC", "String!") },
         {
           value: "String!",

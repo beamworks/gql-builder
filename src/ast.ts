@@ -6,20 +6,20 @@ export type VarDefinition<VarName extends string, VarType extends string> = {
   [VAR_MARKER]: [VarName, VarType];
 };
 
-// operation params map
+// field arguments map
 export interface ArgumentsShape {
   [paramName: string]: VarDefinition<string, string>;
 }
 
-// operation definition object
+// full field definition object
 // @todo rename to args selection or something, and use for aliasing simple fields too
-export const OP_MARKER = Symbol("op marker");
+export const FIELD_MARKER = Symbol("field marker");
 export type FieldDefinition<
   Name extends string | null, // null means infer from field name
   Args extends ArgumentsShape,
   Selection
 > = {
-  [OP_MARKER]: [Name, Args, Selection];
+  [FIELD_MARKER]: [Name, Args, Selection];
 };
 
 // using the weird "ask to TS keep strings narrow" trick from:
@@ -27,7 +27,7 @@ export type FieldDefinition<
 // and discussed here: https://github.com/microsoft/TypeScript/issues/30680
 // @todo rename to selection
 export type SelectionShape<MagicNarrowString extends string> = {
-  [OP_MARKER]?: undefined; // disambiguation
+  [FIELD_MARKER]?: undefined; // disambiguation
 
   [key: string]:
     | MagicNarrowString
@@ -39,19 +39,19 @@ export type SelectionShape<MagicNarrowString extends string> = {
       >;
 };
 
-function isOp(
+function isFieldDef(
   obj: SelectionShape<string> | FieldDefinition<any, any, any>
 ): obj is FieldDefinition<any, any, any> {
-  return obj[OP_MARKER] !== undefined;
+  return obj[FIELD_MARKER] !== undefined;
 }
 
 export function produceSimpleFieldSet(
-  defs: SelectionShape<string>
+  selection: SelectionShape<string>
 ): SelectionSetNode {
   return {
     kind: Kind.SELECTION_SET,
-    selections: Object.keys(defs).map((field) => {
-      const value = defs[field];
+    selections: Object.keys(selection).map((field) => {
+      const value = selection[field];
 
       if (typeof value === "string") {
         return {
@@ -63,29 +63,29 @@ export function produceSimpleFieldSet(
         };
       }
 
-      if (isOp(value)) {
-        const [opName, params, defs] = value[OP_MARKER];
+      if (isFieldDef(value)) {
+        const [name, args, subSelection] = value[FIELD_MARKER];
 
         return {
           kind: Kind.FIELD,
           name: {
             kind: Kind.NAME,
-            value: opName === null ? field : opName,
+            value: name === null ? field : name,
           },
           alias:
-            opName === null
+            name === null
               ? undefined
               : {
                   kind: Kind.NAME,
                   value: field,
                 },
-          arguments: Object.keys(params).map((paramKey) => {
-            const param = params[paramKey];
+          arguments: Object.keys(args).map((argKey) => {
+            const param = args[argKey];
             return {
               kind: Kind.ARGUMENT,
               name: {
                 kind: Kind.NAME,
-                value: paramKey,
+                value: argKey,
               },
               value: {
                 kind: Kind.VARIABLE,
@@ -96,7 +96,7 @@ export function produceSimpleFieldSet(
               },
             };
           }),
-          selectionSet: produceSimpleFieldSet(defs),
+          selectionSet: produceSimpleFieldSet(subSelection),
         };
       }
 

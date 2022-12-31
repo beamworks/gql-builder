@@ -12,7 +12,7 @@ import {
   FieldDefinition,
   SelectionShape,
   VAR_MARKER,
-  OP_MARKER,
+  FIELD_MARKER,
   produceSimpleFieldSet,
 } from "./ast";
 
@@ -40,42 +40,46 @@ export function input<VarName extends string, VarType extends string>(
   };
 }
 
-// convenience variations with and without explicit op name
-export function op<
+// convenience variations with and without explicit "real" field name
+export function select<
   Args extends ArgumentsShape,
   Selection extends SelectionShape<MagicNarrowString>,
   MagicNarrowString extends string
->(params: Args, defs: Selection): FieldDefinition<null, Args, Selection>;
+>(args: Args, selection: Selection): FieldDefinition<null, Args, Selection>;
 
-export function op<
-  OpName extends string,
+export function select<
+  Name extends string,
   Args extends ArgumentsShape,
   Selection extends SelectionShape<MagicNarrowString>,
   MagicNarrowString extends string
 >(
-  opName: OpName,
-  params: Args,
-  defs: Selection
-): FieldDefinition<OpName, Args, Selection>;
+  name: Name,
+  args: Args,
+  selection: Selection
+): FieldDefinition<Name, Args, Selection>;
 
-export function op(
-  ...args:
+export function select(
+  ...selectArgs:
     | [string, ArgumentsShape, SelectionShape<string>]
     | [ArgumentsShape, SelectionShape<string>]
 ) {
-  const [opName, params, defs] =
-    args.length === 2
-      ? ([null, ...args] as [null, ArgumentsShape, SelectionShape<string>])
-      : args;
+  const [name, args, selection] =
+    selectArgs.length === 2
+      ? ([null, ...selectArgs] as [
+          null,
+          ArgumentsShape,
+          SelectionShape<string>
+        ])
+      : selectArgs;
 
-  return { [OP_MARKER]: [opName, params, defs] };
+  return { [FIELD_MARKER]: [name, args, selection] };
 }
 
 export function query<
   Selection extends SelectionShape<MagicNarrowString>,
   MagicNarrowString extends string
 >(
-  defs: Selection // top level, like anything, can be simple fields, ops, etc
+  defs: Selection // top level, like anything, can be simple fields, selections with arguments, etc
 ): Runner<Selection> {
   const testAST: ASTNode = {
     kind: Kind.DOCUMENT,
@@ -120,11 +124,13 @@ type VarsForSelectionShape<
   ? Selection[Field] extends string
     ? never
     : Selection[Field] extends FieldDefinition<
-        infer OpName,
-        infer OpParams,
-        infer OpFields
+        any,
+        infer FieldArgs,
+        infer FieldSubSelection
       >
-    ? VarAsKeyValue<OpParams[keyof OpParams]> | VarsForSelectionShape<OpFields>
+    ?
+        | VarAsKeyValue<FieldArgs[keyof FieldArgs]>
+        | VarsForSelectionShape<FieldSubSelection>
     : VarsForSelectionShape<Selection[Field]>
   : never;
 
@@ -152,10 +158,10 @@ type OutputForSelectionShape<Selection> = {
   [Field in keyof Selection]: Selection[Field] extends string
     ? FieldTypeMap[Extract<Selection[Field], keyof FieldTypeMap>]
     : Selection[Field] extends FieldDefinition<
-        infer OpName,
         any,
-        infer OpFields
+        any,
+        infer FieldSubSelection
       >
-    ? OutputForSelectionShape<OpFields>
+    ? OutputForSelectionShape<FieldSubSelection>
     : OutputForSelectionShape<Selection[Field]>;
 };
