@@ -37,9 +37,9 @@ const q = query({
 });
 
 const bareVars: RunnerVars<typeof q> = {
-  $varA: "asdf",
-  $varB: 1234,
-  $varC: "cvbxcvb",
+  varA: "asdf",
+  varB: 1234,
+  varC: "cvbxcvb",
 };
 
 const a = q.run(bareVars).order.legacyResourceId;

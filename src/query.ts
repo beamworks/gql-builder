@@ -13,12 +13,20 @@ type VarDefinition<VarName extends string, VarType extends string> = {
   [VAR_MARKER]: [VarName, VarType];
 };
 
-export function input<VarName extends `$${string}`, VarType extends string>(
-  varName: VarName,
+function sliceVarPrefix<A extends string>(a: `$${A}`): A {
+  if (a[0] !== "$") {
+    throw new Error("var should be prefixed with $");
+  }
+
+  return a.slice(1) as A;
+}
+
+export function input<VarName extends string, VarType extends string>(
+  varNameWithPrefix: `$${VarName}`,
   varType: VarType
 ): VarDefinition<VarName, VarType> {
   return {
-    [VAR_MARKER]: [varName, varType],
+    [VAR_MARKER]: [sliceVarPrefix<VarName>(varNameWithPrefix), varType],
   };
 }
 
