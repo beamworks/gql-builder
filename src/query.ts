@@ -80,12 +80,18 @@ type Definitions<MagicNarrowString extends string> = {
       >;
 };
 
-export declare function query<
+export function query<
   Defs extends Definitions<MagicNarrowString>,
   MagicNarrowString extends string
 >(
   defs: Defs // top level, like anything, can be simple fields, ops, etc
-): Runner<Defs>;
+): Runner<Defs> {
+  return {
+    run() {
+      throw new Error("not implemented");
+    },
+  };
+}
 
 // type VarsBareNames<Vars> = {
 //   [T in keyof Vars as T extends `$${infer BareName}`
