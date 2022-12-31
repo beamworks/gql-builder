@@ -88,6 +88,7 @@ export function alias<
   return { [FIELD_MARKER]: [realFieldName, null, fieldType] };
 }
 
+// @todo produce the AST asynchronously
 export function query<
   Selection extends SelectionShape<MagicNarrowString>,
   MagicNarrowString extends string
@@ -132,7 +133,7 @@ export function query<
   console.log("printed query:", print(testAST));
 
   return {
-    run() {
+    async run() {
       throw new Error("not implemented");
     },
   };
@@ -184,7 +185,7 @@ type UnionToIntersection<Union> = (
 export interface Runner<Selection extends SelectionShape<string>> {
   run(
     vars: UnionToIntersection<VarsForSelectionShape<Selection>>
-  ): OutputForSelectionShape<Selection>;
+  ): Promise<OutputForSelectionShape<Selection>>;
 }
 
 // utility to infer used variable names from defined query

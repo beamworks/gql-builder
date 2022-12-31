@@ -47,9 +47,11 @@ const bareVars: RunnerVars<typeof q> = {
   varC: "cvbxcvb",
 };
 
-const a = q.run(bareVars).order.legacyResourceId;
-const b = q.run(bareVars).order.shippingAddress.zip;
-const b1 = q.run(bareVars).order.shippingAddress.countryCode;
-const b2 = q.run(bareVars).order.total.amount;
-const c = q.run(bareVars).order.renamedOp;
-const d = q.run(bareVars).order.someImplicitOp.value;
+q.run(bareVars).then((result) => {
+  const a = result.order.legacyResourceId;
+  const b = result.order.shippingAddress.zip;
+  const b1 = result.order.shippingAddress.countryCode;
+  const b2 = result.order.total.amount;
+  const c = result.order.renamedOp;
+  const d = result.order.someImplicitOp.value;
+});
