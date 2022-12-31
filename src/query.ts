@@ -75,6 +75,17 @@ export function select(
   return { [FIELD_MARKER]: [name, args, selection] };
 }
 
+// same as select() but without arguments
+export function alias<
+  Name extends string,
+  Selection extends SelectionShape<string> | string
+>(
+  realFieldName: Name,
+  fieldType: Selection
+): FieldDefinition<Name, null, Selection> {
+  return { [FIELD_MARKER]: [realFieldName, null, fieldType] };
+}
+
 export function query<
   Selection extends SelectionShape<MagicNarrowString>,
   MagicNarrowString extends string
@@ -121,18 +132,21 @@ type VarsForSelectionShape<
   Selection extends SelectionShape<any>,
   Field = keyof Selection
 > = Field extends string
-  ? Selection[Field] extends string
-    ? never
-    : Selection[Field] extends FieldDefinition<
-        any,
-        infer FieldArgs,
-        infer FieldSubSelection
-      >
-    ?
-        | VarAsKeyValue<FieldArgs[keyof FieldArgs]>
-        | VarsForSelectionShape<FieldSubSelection>
+  ? Selection[Field] extends FieldDefinition<
+      any,
+      infer FieldArgs,
+      infer FieldSubSelection
+    >
+    ? VarsForField<FieldArgs, FieldSubSelection>
     : VarsForSelectionShape<Selection[Field]>
   : never;
+
+type VarsForField<
+  Args extends ArgumentsShape | null,
+  Selection
+> = Selection extends string
+  ? never
+  : VarAsKeyValue<Args[keyof Args]> | VarsForSelectionShape<Selection>;
 
 // more evil magic: https://stackoverflow.com/questions/50374908/transform-union-type-to-intersection-type
 type UnionToIntersection<Union> = (
@@ -155,13 +169,15 @@ export type RunnerVars<R extends Runner<SelectionShape<any>>> =
 
 // interpret the collected query definitions
 type OutputForSelectionShape<Selection> = {
-  [Field in keyof Selection]: Selection[Field] extends string
-    ? FieldTypeMap[Extract<Selection[Field], keyof FieldTypeMap>]
-    : Selection[Field] extends FieldDefinition<
-        any,
-        any,
-        infer FieldSubSelection
-      >
-    ? OutputForSelectionShape<FieldSubSelection>
-    : OutputForSelectionShape<Selection[Field]>;
+  [Field in keyof Selection]: Selection[Field] extends FieldDefinition<
+    any,
+    any,
+    infer FieldSubSelection
+  >
+    ? OutputForField<FieldSubSelection>
+    : OutputForField<Selection[Field]>;
 };
+
+type OutputForField<Selection> = Selection extends string
+  ? FieldTypeMap[Extract<Selection, keyof FieldTypeMap>]
+  : OutputForSelectionShape<Selection>;

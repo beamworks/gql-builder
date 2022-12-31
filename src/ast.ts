@@ -16,7 +16,7 @@ export interface ArgumentsShape {
 export const FIELD_MARKER = Symbol("field marker");
 export type FieldDefinition<
   Name extends string | null, // null means infer from field name
-  Args extends ArgumentsShape,
+  Args extends ArgumentsShape | null,
   Selection
 > = {
   [FIELD_MARKER]: [Name, Args, Selection];
@@ -34,8 +34,8 @@ export type SelectionShape<MagicNarrowString extends string> = {
     | SelectionShape<MagicNarrowString>
     | FieldDefinition<
         MagicNarrowString | null,
-        ArgumentsShape,
-        SelectionShape<MagicNarrowString>
+        ArgumentsShape | null,
+        SelectionShape<MagicNarrowString> | string
       >;
 };
 
@@ -79,24 +79,29 @@ export function produceSimpleFieldSet(
                   kind: Kind.NAME,
                   value: field,
                 },
-          arguments: Object.keys(args).map((argKey) => {
-            const param = args[argKey];
-            return {
-              kind: Kind.ARGUMENT,
-              name: {
-                kind: Kind.NAME,
-                value: argKey,
-              },
-              value: {
-                kind: Kind.VARIABLE,
-                name: {
-                  kind: Kind.NAME,
-                  value: param[VAR_MARKER][0],
-                },
-              },
-            };
-          }),
-          selectionSet: produceSimpleFieldSet(subSelection),
+          arguments: args
+            ? Object.keys(args).map((argKey) => {
+                const param = args[argKey];
+                return {
+                  kind: Kind.ARGUMENT,
+                  name: {
+                    kind: Kind.NAME,
+                    value: argKey,
+                  },
+                  value: {
+                    kind: Kind.VARIABLE,
+                    name: {
+                      kind: Kind.NAME,
+                      value: param[VAR_MARKER][0],
+                    },
+                  },
+                };
+              })
+            : undefined,
+          selectionSet:
+            typeof subSelection === "string"
+              ? undefined // simple field
+              : produceSimpleFieldSet(subSelection),
         };
       }
 

@@ -1,5 +1,5 @@
 // scratchpad
-import { query, select, input, RunnerVars } from "./src/query";
+import { query, select, alias, input, RunnerVars } from "./src/query";
 
 const q = query({
   order: select(
@@ -14,9 +14,14 @@ const q = query({
         address2: "String!",
         city: "String!",
         provinceCode: "String!",
-        countryCodeV2: "String!",
+        countryCode: alias("countryCodeV2", "String!"),
         zip: "String!",
       },
+
+      total: alias("discountedPriceTotal", {
+        amount: "Number!",
+        currencyCode: "String!",
+      }),
 
       renamedOp: select(
         "metafield",
@@ -44,5 +49,7 @@ const bareVars: RunnerVars<typeof q> = {
 
 const a = q.run(bareVars).order.legacyResourceId;
 const b = q.run(bareVars).order.shippingAddress.zip;
+const b1 = q.run(bareVars).order.shippingAddress.countryCode;
+const b2 = q.run(bareVars).order.total.amount;
 const c = q.run(bareVars).order.renamedOp;
 const d = q.run(bareVars).order.someImplicitOp.value;
