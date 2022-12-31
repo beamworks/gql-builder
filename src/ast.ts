@@ -7,46 +7,46 @@ export type VarDefinition<VarName extends string, VarType extends string> = {
 };
 
 // operation params map
-export interface OpParamDefs {
+export interface ArgumentsShape {
   [paramName: string]: VarDefinition<string, string>;
 }
 
 // operation definition object
 // @todo rename to args selection or something, and use for aliasing simple fields too
 export const OP_MARKER = Symbol("op marker");
-export type OpDefinition<
-  OpName extends string | null, // null means infer from field name
-  Params extends OpParamDefs,
-  Defs
+export type FieldDefinition<
+  Name extends string | null, // null means infer from field name
+  Args extends ArgumentsShape,
+  Selection
 > = {
-  [OP_MARKER]: [OpName, Params, Defs];
+  [OP_MARKER]: [Name, Args, Selection];
 };
 
 // using the weird "ask to TS keep strings narrow" trick from:
 // https://stackoverflow.com/questions/59440453/dynamically-generate-return-type-based-on-array-parameter-of-objects-in-typescri
 // and discussed here: https://github.com/microsoft/TypeScript/issues/30680
 // @todo rename to selection
-export type Definitions<MagicNarrowString extends string> = {
+export type SelectionShape<MagicNarrowString extends string> = {
   [OP_MARKER]?: undefined; // disambiguation
 
   [key: string]:
     | MagicNarrowString
-    | Definitions<MagicNarrowString>
-    | OpDefinition<
+    | SelectionShape<MagicNarrowString>
+    | FieldDefinition<
         MagicNarrowString | null,
-        OpParamDefs,
-        Definitions<MagicNarrowString>
+        ArgumentsShape,
+        SelectionShape<MagicNarrowString>
       >;
 };
 
 function isOp(
-  obj: Definitions<string> | OpDefinition<any, any, any>
-): obj is OpDefinition<any, any, any> {
+  obj: SelectionShape<string> | FieldDefinition<any, any, any>
+): obj is FieldDefinition<any, any, any> {
   return obj[OP_MARKER] !== undefined;
 }
 
 export function produceSimpleFieldSet(
-  defs: Definitions<string>
+  defs: SelectionShape<string>
 ): SelectionSetNode {
   return {
     kind: Kind.SELECTION_SET,

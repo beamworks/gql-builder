@@ -8,9 +8,9 @@ import {
 
 import {
   VarDefinition,
-  OpParamDefs,
-  OpDefinition,
-  Definitions,
+  ArgumentsShape,
+  FieldDefinition,
+  SelectionShape,
   VAR_MARKER,
   OP_MARKER,
   produceSimpleFieldSet,
@@ -42,41 +42,41 @@ export function input<VarName extends string, VarType extends string>(
 
 // convenience variations with and without explicit op name
 export function op<
-  Params extends OpParamDefs,
-  Defs extends Definitions<MagicNarrowString>,
+  Args extends ArgumentsShape,
+  Selection extends SelectionShape<MagicNarrowString>,
   MagicNarrowString extends string
->(params: Params, defs: Defs): OpDefinition<null, Params, Defs>;
+>(params: Args, defs: Selection): FieldDefinition<null, Args, Selection>;
 
 export function op<
   OpName extends string,
-  Params extends OpParamDefs,
-  Defs extends Definitions<MagicNarrowString>,
+  Args extends ArgumentsShape,
+  Selection extends SelectionShape<MagicNarrowString>,
   MagicNarrowString extends string
 >(
   opName: OpName,
-  params: Params,
-  defs: Defs
-): OpDefinition<OpName, Params, Defs>;
+  params: Args,
+  defs: Selection
+): FieldDefinition<OpName, Args, Selection>;
 
 export function op(
   ...args:
-    | [string, OpParamDefs, Definitions<string>]
-    | [OpParamDefs, Definitions<string>]
+    | [string, ArgumentsShape, SelectionShape<string>]
+    | [ArgumentsShape, SelectionShape<string>]
 ) {
   const [opName, params, defs] =
     args.length === 2
-      ? ([null, ...args] as [null, OpParamDefs, Definitions<string>])
+      ? ([null, ...args] as [null, ArgumentsShape, SelectionShape<string>])
       : args;
 
   return { [OP_MARKER]: [opName, params, defs] };
 }
 
 export function query<
-  Defs extends Definitions<MagicNarrowString>,
+  Selection extends SelectionShape<MagicNarrowString>,
   MagicNarrowString extends string
 >(
-  defs: Defs // top level, like anything, can be simple fields, ops, etc
-): Runner<Defs> {
+  defs: Selection // top level, like anything, can be simple fields, ops, etc
+): Runner<Selection> {
   const testAST: ASTNode = {
     kind: Kind.DOCUMENT,
     definitions: [
@@ -113,19 +113,19 @@ type VarAsKeyValue<Def> = Def extends VarDefinition<
 
 // get a union of { param: type } variable info objects from definitions
 // (note: `Field extends string` ternary seems to be required, otherwise recursion fails
-type VarsForDefs<
-  Defs extends Definitions<any>,
-  Field = keyof Defs
+type VarsForSelectionShape<
+  Selection extends SelectionShape<any>,
+  Field = keyof Selection
 > = Field extends string
-  ? Defs[Field] extends string
+  ? Selection[Field] extends string
     ? never
-    : Defs[Field] extends OpDefinition<
+    : Selection[Field] extends FieldDefinition<
         infer OpName,
         infer OpParams,
         infer OpFields
       >
-    ? VarAsKeyValue<OpParams[keyof OpParams]> | VarsForDefs<OpFields>
-    : VarsForDefs<Defs[Field]>
+    ? VarAsKeyValue<OpParams[keyof OpParams]> | VarsForSelectionShape<OpFields>
+    : VarsForSelectionShape<Selection[Field]>
   : never;
 
 // more evil magic: https://stackoverflow.com/questions/50374908/transform-union-type-to-intersection-type
@@ -135,22 +135,27 @@ type UnionToIntersection<Union> = (
   ? Intersection
   : never;
 
-export interface Runner<Defs extends Definitions<string>> {
-  run(vars: UnionToIntersection<VarsForDefs<Defs>>): OutputForDefs<Defs>;
+export interface Runner<Selection extends SelectionShape<string>> {
+  run(
+    vars: UnionToIntersection<VarsForSelectionShape<Selection>>
+  ): OutputForSelectionShape<Selection>;
 }
 
 // utility to infer used variable names from defined query
-export type RunnerVars<R extends Runner<Definitions<any>>> = R extends Runner<
-  infer Defs
->
-  ? UnionToIntersection<VarsForDefs<Defs>>
-  : never;
+export type RunnerVars<R extends Runner<SelectionShape<any>>> =
+  R extends Runner<infer Selection>
+    ? UnionToIntersection<VarsForSelectionShape<Selection>>
+    : never;
 
 // interpret the collected query definitions
-type OutputForDefs<Defs> = {
-  [Field in keyof Defs]: Defs[Field] extends string
-    ? FieldTypeMap[Extract<Defs[Field], keyof FieldTypeMap>]
-    : Defs[Field] extends OpDefinition<infer OpName, any, infer OpFields>
-    ? OutputForDefs<OpFields>
-    : OutputForDefs<Defs[Field]>;
+type OutputForSelectionShape<Selection> = {
+  [Field in keyof Selection]: Selection[Field] extends string
+    ? FieldTypeMap[Extract<Selection[Field], keyof FieldTypeMap>]
+    : Selection[Field] extends FieldDefinition<
+        infer OpName,
+        any,
+        infer OpFields
+      >
+    ? OutputForSelectionShape<OpFields>
+    : OutputForSelectionShape<Selection[Field]>;
 };
