@@ -1,6 +1,9 @@
-// scratchpad
-import { query, select, alias, input, RunnerVars } from "./src/query";
+import { GraphQLClient } from "graphql-request";
+import { VariablesOf } from "@graphql-typed-document-node/core";
 
+import { query, select, alias, input } from "./src/query";
+
+// scratchpad
 const q = query({
   order: select(
     { argA: input("$varA", "ID!"), argB: input("$varB", "Number!") },
@@ -41,13 +44,15 @@ const q = query({
   ),
 });
 
-const bareVars: RunnerVars<typeof q> = {
+const gqlClient = new GraphQLClient("http://example.com");
+
+const bareVars: VariablesOf<typeof q> = {
   varA: "asdf",
   varB: 1234,
   varC: "cvbxcvb",
 };
 
-q.run(bareVars).then((result) => {
+gqlClient.request(q, bareVars).then((result) => {
   const a = result.order.legacyResourceId;
   const b = result.order.shippingAddress.zip;
   const b1 = result.order.shippingAddress.countryCode;

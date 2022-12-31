@@ -6,6 +6,7 @@ import {
   VariableDefinitionNode,
   print,
 } from "graphql";
+import { TypedDocumentNode } from "@graphql-typed-document-node/core";
 
 import {
   VarDefinition,
@@ -94,7 +95,7 @@ export function query<
   MagicNarrowString extends string
 >(
   defs: Selection // top level, like anything, can be simple fields, selections with arguments, etc
-): Runner<Selection> {
+): QueryDefinition<Selection> {
   const allVars: { [name: string]: string } = {};
   const rootSelectionSet = produceSimpleFieldSet(defs, allVars);
 
@@ -132,11 +133,7 @@ export function query<
 
   console.log("printed query:", print(testAST));
 
-  return {
-    async run() {
-      throw new Error("not implemented");
-    },
-  };
+  return testAST;
 }
 
 // type VarsBareNames<Vars> = {
@@ -182,17 +179,24 @@ type UnionToIntersection<Union> = (
   ? Intersection
   : never;
 
-export interface Runner<Selection extends SelectionShape<string>> {
-  run(
-    vars: UnionToIntersection<VarsForSelectionShape<Selection>>
-  ): Promise<OutputForSelectionShape<Selection>>;
-}
+export type QueryDefinition<Selection extends SelectionShape<string>> =
+  TypedDocumentNode<
+    OutputForSelectionShape<Selection>,
+    UnionToIntersection<VarsForSelectionShape<Selection>>
+  >;
 
-// utility to infer used variable names from defined query
-export type RunnerVars<R extends Runner<SelectionShape<any>>> =
-  R extends Runner<infer Selection>
-    ? UnionToIntersection<VarsForSelectionShape<Selection>>
-    : never;
+// query instance @todo remove
+// type QueryDefinition = {
+//   run(
+//     vars: UnionToIntersection<VarsForSelectionShape<Selection>>
+//   ): Promise<OutputForSelectionShape<Selection>>;
+// };
+
+// utility to infer used variable names from defined query @todo remove
+// export type QueryVars<R extends QueryDefinition<SelectionShape<any>>> =
+//   R extends QueryDefinition<infer Selection>
+//     ? UnionToIntersection<VarsForSelectionShape<Selection>>
+//     : never;
 
 // interpret the collected query definitions
 type OutputForSelectionShape<Selection> = {
