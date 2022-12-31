@@ -1,3 +1,5 @@
+import { ASTNode, Kind, OperationTypeNode, print } from "graphql";
+
 // GraphQL types to JS types
 type FieldTypeMap = {
   "String!": string;
@@ -86,6 +88,30 @@ export function query<
 >(
   defs: Defs // top level, like anything, can be simple fields, ops, etc
 ): Runner<Defs> {
+  const testAST: ASTNode = {
+    kind: Kind.DOCUMENT,
+    definitions: [
+      {
+        kind: Kind.OPERATION_DEFINITION,
+        operation: OperationTypeNode.QUERY,
+        selectionSet: {
+          kind: Kind.SELECTION_SET,
+          selections: [
+            {
+              kind: Kind.FIELD,
+              name: {
+                kind: Kind.NAME,
+                value: "helloworld",
+              },
+            },
+          ],
+        },
+      },
+    ],
+  };
+
+  console.log("printed query:", print(testAST));
+
   return {
     run() {
       throw new Error("not implemented");

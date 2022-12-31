@@ -8,6 +8,9 @@
   "scripts": {
     "build": "tsc --outDir dist --noEmit false"
   },
+  "dependencies": {
+    "graphql": "^16.6.0"
+  },
   "devDependencies": {
     "prettier": "^2.8.1",
     "typescript": "~4.1.0"
